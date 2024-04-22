@@ -17,8 +17,28 @@
  * SPDX-License-Identifier: Apache-2.0
  ******************************************************************************/
 
- package main
+package main
 
+import (
+	"flag"
+	"fmt"
+	"os"
+)
 
 func main() {
+	owner, token := getArgs()
+	fmt.Println(owner, token)
+}
+
+func getArgs() (string, string) {
+
+	owner := flag.String("owner", "", "Specify GitHub User or Organization")
+	token := flag.String("token", "", "Specify GitHub Token")
+	flag.Parse()
+
+	if *owner == "" || *token == "" {
+		fmt.Println("Missing required arguments, please specify -owner [owner] and -token [token]")
+		os.Exit(1)
+	}
+	return *owner, *token
 }

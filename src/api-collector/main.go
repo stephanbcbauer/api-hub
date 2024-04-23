@@ -25,10 +25,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/google/go-github/v48/github"
 	"golang.org/x/oauth2"
 )
+
+type assetInfo struct {
+	assetID   int64
+	assetName string
+}
 
 func main() {
 	owner, token := getArgs()
@@ -36,10 +42,17 @@ func main() {
 	client := getAuthenticatedClient(ctx, token)
 	repos, err := getOrgRepos(ctx, owner, client)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error fetching repos: %s", err)
 		os.Exit(1)
 	}
-	fmt.Println(repos)
+	for _, repo := range repos {
+		log.Println("Scanning repo ", *repo.Name)
+		apiSpecs := getAPISpecs(ctx, client, owner, *repo.Name)
+		if apiSpecs == nil {
+			log.Println("\t- No API specs found.")
+			continue
+		}
+	}
 }
 
 func getArgs() (string, string) {
@@ -84,4 +97,25 @@ func getOrgRepos(ctx context.Context, gitOwner string, client *github.Client) ([
 	}
 
 	return allRepos, nil
+}
+
+func getAPISpecs(ctx context.Context, client *github.Client, owner string, repo string) []assetInfo {
+	var apiSpecs []assetInfo
+	release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repo)
+	if err != nil {
+		log.Println("\t- Release not found.")
+		return apiSpecs
+	}
+	log.Println("\t+ Latest release found: ", *release.Name)
+	assets, _, err := client.Repositories.ListReleaseAssets(ctx, owner, repo, *release.ID, nil)
+	if err != nil {
+		log.Printf("\t- No assets found in the release.\n")
+		return apiSpecs
+	}
+	for _, asset := range assets {
+		if strings.Contains(*asset.Name, "openapi.yaml") {
+			apiSpecs = append(apiSpecs, assetInfo{*asset.ID, *asset.Name})
+		}
+	}
+	return apiSpecs
 }

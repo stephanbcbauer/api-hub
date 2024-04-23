@@ -20,14 +20,26 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/google/go-github/v48/github"
+	"golang.org/x/oauth2"
 )
 
 func main() {
 	owner, token := getArgs()
-	fmt.Println(owner, token)
+	ctx := context.Background()
+	client := getAuthenticatedClient(ctx, token)
+	repos, err := getOrgRepos(ctx, owner, client)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	fmt.Println(repos)
 }
 
 func getArgs() (string, string) {
@@ -41,4 +53,35 @@ func getArgs() (string, string) {
 		os.Exit(1)
 	}
 	return *owner, *token
+}
+
+func getAuthenticatedClient(ctx context.Context, gitToken string) *github.Client {
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: gitToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	return github.NewClient(tc)
+}
+
+func getOrgRepos(ctx context.Context, gitOwner string, client *github.Client) ([]*github.Repository, error) {
+	opt := &github.RepositoryListByOrgOptions{
+		ListOptions: github.ListOptions{},
+	}
+
+	var allRepos []*github.Repository
+
+	for {
+		repos, response, err := client.Repositories.ListByOrg(ctx, gitOwner, opt)
+		if err != nil {
+			return nil, err
+		}
+		allRepos = append(allRepos, repos...)
+		if response.NextPage == 0 {
+			break
+		}
+		opt.Page = response.NextPage
+	}
+
+	return allRepos, nil
 }

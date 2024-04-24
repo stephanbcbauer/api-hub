@@ -23,17 +23,30 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/google/go-github/v48/github"
 	"golang.org/x/oauth2"
+	"gopkg.in/yaml.v2"
 )
 
 type assetInfo struct {
-	assetID   int64
-	assetName string
+	id   int64
+	name string
+}
+
+type OpenAPIInfo struct {
+	Version string `yaml:"version"`
+	Title string `yaml:"title"`
+}
+type OpenAPISpec struct {
+	OpenAPI string `yaml:"openapi"`
+	Info OpenAPIInfo `yaml:"info"`
 }
 
 func main() {
@@ -47,11 +60,13 @@ func main() {
 	}
 	for _, repo := range repos {
 		log.Println("Scanning repo ", *repo.Name)
-		apiSpecs := getAPISpecs(ctx, client, owner, *repo.Name)
-		if apiSpecs == nil {
-			log.Println("\t- No API specs found.")
-			continue
+		specAssets := getAPISpecAssets(ctx, client, owner, *repo.Name)
+		if specAssets == nil {
+			log.Println("\t- No API specs found")
+		continue
 		}
+		downloadedSpecs := downloadAPISpecs(ctx, client, owner, *repo.Name, specAssets)
+		fmt.Println(downloadedSpecs)
 	}
 }
 
@@ -99,23 +114,75 @@ func getOrgRepos(ctx context.Context, gitOwner string, client *github.Client) ([
 	return allRepos, nil
 }
 
-func getAPISpecs(ctx context.Context, client *github.Client, owner string, repo string) []assetInfo {
+func getAPISpecAssets(ctx context.Context, client *github.Client, owner string, repo string) []assetInfo {
 	var apiSpecs []assetInfo
 	release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repo)
 	if err != nil {
-		log.Println("\t- Release not found.")
+		log.Println("\t- Release not found")
 		return apiSpecs
 	}
 	log.Println("\t+ Latest release found: ", *release.Name)
 	assets, _, err := client.Repositories.ListReleaseAssets(ctx, owner, repo, *release.ID, nil)
 	if err != nil {
-		log.Printf("\t- No assets found in the release.\n")
+		log.Println("\t- No assets found in the release")
 		return apiSpecs
 	}
 	for _, asset := range assets {
+		fmt.Printf("Asset: %v\n", *asset.Name)
 		if strings.Contains(*asset.Name, "openapi.yaml") {
 			apiSpecs = append(apiSpecs, assetInfo{*asset.ID, *asset.Name})
 		}
 	}
 	return apiSpecs
+}
+
+func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, repo string, assets []assetInfo) []string {
+	var downloadedSpecs []string
+	for _, asset := range assets {
+		assetReader, assetURL, err := client.Repositories.DownloadReleaseAsset(ctx, owner, repo, asset.id, nil)
+		if err != nil {
+			log.Printf("\t- Error downloading OpenAPI spec %s: %s\n", asset.name, err)
+			continue
+		}
+		var reader io.ReadCloser
+		if assetReader == nil {
+			resp, err := http.Get(assetURL)
+			if err != nil {
+				log.Printf("\t- Error downloading OpenAPI spec %s: %s\n", asset.name, err)
+				continue
+			}
+			reader = resp.Body
+			defer resp.Body.Close()
+		} else {
+			reader = assetReader
+			defer assetReader.Close()
+		}
+		body, err := io.ReadAll(reader)
+		if err != nil {
+			log.Printf("\t- Error reading OpenAPI spec %s: %s\n", asset.name, err)
+			continue
+		}
+		var spec OpenAPISpec
+		err = yaml.Unmarshal(body, &spec)
+		if err != nil {
+			log.Printf("\t- Error parsing OpenAPI spec yaml format: %s\n", err)
+			continue
+		}
+		dirPath := path.Join("docs", repo, spec.Info.Version)
+		err = os.MkdirAll(dirPath, os.ModePerm)
+		if err != nil {
+			log.Printf("\t- Error creating directory: %s\n", err)
+			continue
+		}
+		filePath := path.Join(dirPath, asset.name)
+		err = os.WriteFile(filePath, body, 0644)
+		if err != nil {
+			log.Printf("\t- Error saving OpenAPI spec content to file: %s\n", err)
+			continue
+		}
+		downloadedSpecs = append(downloadedSpecs, filePath)
+		log.Printf("\t+ OpenAPI spec %s downloaded successfully\n", asset.name)
+
+	}
+	return downloadedSpecs
 }

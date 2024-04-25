@@ -35,6 +35,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const API_DOCS_REPO = "api-hub"
+
 type assetInfo struct {
 	id   int64
 	name string
@@ -42,11 +44,11 @@ type assetInfo struct {
 
 type OpenAPIInfo struct {
 	Version string `yaml:"version"`
-	Title string `yaml:"title"`
+	Title   string `yaml:"title"`
 }
 type OpenAPISpec struct {
-	OpenAPI string `yaml:"openapi"`
-	Info OpenAPIInfo `yaml:"info"`
+	OpenAPI string      `yaml:"openapi"`
+	Info    OpenAPIInfo `yaml:"info"`
 }
 
 func main() {
@@ -62,11 +64,11 @@ func main() {
 		log.Println("Scanning repo ", *repo.Name)
 		specAssets := getAPISpecAssets(ctx, client, owner, *repo.Name)
 		if specAssets == nil {
-			log.Println("\t- No API specs found")
-		continue
+			log.Println("\t- No OpenAPI specs found")
+			continue
 		}
 		downloadedSpecs := downloadAPISpecs(ctx, client, owner, *repo.Name, specAssets)
-		fmt.Println(downloadedSpecs)
+		uploadAPISpecs(ctx, client, owner, API_DOCS_REPO, downloadedSpecs)
 	}
 }
 
@@ -118,17 +120,16 @@ func getAPISpecAssets(ctx context.Context, client *github.Client, owner string, 
 	var apiSpecs []assetInfo
 	release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repo)
 	if err != nil {
-		log.Println("\t- Release not found")
+		log.Println("\t- No release found")
 		return apiSpecs
 	}
-	log.Println("\t+ Latest release found: ", *release.Name)
+	log.Printf("\t+ Latest release found: %s\n", *release.Name)
 	assets, _, err := client.Repositories.ListReleaseAssets(ctx, owner, repo, *release.ID, nil)
 	if err != nil {
 		log.Println("\t- No assets found in the release")
 		return apiSpecs
 	}
 	for _, asset := range assets {
-		fmt.Printf("Asset: %v\n", *asset.Name)
 		if strings.Contains(*asset.Name, "openapi.yaml") {
 			apiSpecs = append(apiSpecs, assetInfo{*asset.ID, *asset.Name})
 		}
@@ -157,13 +158,13 @@ func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, 
 			reader = assetReader
 			defer assetReader.Close()
 		}
-		body, err := io.ReadAll(reader)
+		content, err := io.ReadAll(reader)
 		if err != nil {
 			log.Printf("\t- Error reading OpenAPI spec %s: %s\n", asset.name, err)
 			continue
 		}
 		var spec OpenAPISpec
-		err = yaml.Unmarshal(body, &spec)
+		err = yaml.Unmarshal(content, &spec)
 		if err != nil {
 			log.Printf("\t- Error parsing OpenAPI spec yaml format: %s\n", err)
 			continue
@@ -175,7 +176,7 @@ func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, 
 			continue
 		}
 		filePath := path.Join(dirPath, asset.name)
-		err = os.WriteFile(filePath, body, 0644)
+		err = os.WriteFile(filePath, content, 0644)
 		if err != nil {
 			log.Printf("\t- Error saving OpenAPI spec content to file: %s\n", err)
 			continue
@@ -185,4 +186,34 @@ func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, 
 
 	}
 	return downloadedSpecs
+}
+
+func uploadAPISpecs(ctx context.Context, client *github.Client, owner string, repo string, specs []string) {
+	for _, spec := range specs {
+		content, err := os.ReadFile(spec)
+		if err != nil {
+			log.Printf("\t- Error reading specification file: %v\n", err)
+			continue
+		}
+		fileOpt := &github.RepositoryContentGetOptions{
+			Ref: "main",
+		}
+		_, _, _, err = client.Repositories.GetContents(ctx, owner, repo, spec, fileOpt)
+		if err != nil && content != nil {
+			if githubErr, ok := err.(*github.ErrorResponse); ok && githubErr.Response.StatusCode == 404 {
+				fileOpt := &github.RepositoryContentFileOptions{
+					Message: github.String(fmt.Sprintf("chore: upload OpenAPI spec: %s", spec)),
+					Content: content,
+				}
+				_, _, err := client.Repositories.CreateFile(ctx, owner, repo, spec, fileOpt)
+				if err != nil {
+					log.Printf("\t- Error uploading file: %s\n", err)
+					continue
+				}
+				log.Printf("\t+ Uploaded successfully %s\n", spec)
+			}
+		} else {
+			log.Printf("\t- Spec file %s already exists, skipping upload.\n", spec)
+		}
+	}
 }

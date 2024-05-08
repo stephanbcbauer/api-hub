@@ -30,7 +30,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/go-github/v48/github"
+	"github.com/google/go-github/v61/github"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v2"
 )
@@ -73,7 +73,6 @@ func main() {
 }
 
 func getArgs() (string, string) {
-
 	owner := flag.String("owner", "", "Specify GitHub User or Organization")
 	token := flag.String("token", "", "Specify GitHub Token")
 	flag.Parse()

@@ -67,7 +67,7 @@ func main() {
 			continue
 		}
 		downloadedSpecs := downloadAPISpecs(ctx, client, owner, *repo.Name, specAssets)
-		uploadAPISpecs(ctx, client, owner, API_DOCS_REPO, downloadedSpecs)
+		commitDownloadedSpec(ctx, client, owner, API_DOCS_REPO, downloadedSpecs)
 	}
 }
 
@@ -185,7 +185,7 @@ func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, 
 	return downloadedSpecs
 }
 
-func uploadAPISpecs(ctx context.Context, client *github.Client, owner string, repo string, specs []string) {
+func commitDownloadedSpec(ctx context.Context, client *github.Client, owner string, repo string, specs []string) {
 	for _, spec := range specs {
 		content, err := os.ReadFile(spec)
 		if err != nil {

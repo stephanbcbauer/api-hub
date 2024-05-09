@@ -58,7 +58,6 @@ func main() {
 	repos, err := getOrgRepos(ctx, owner, client)
 	if err != nil {
 		log.Fatalf("Error fetching repos: %s", err)
-		os.Exit(1)
 	}
 	for _, repo := range repos {
 		log.Println("Scanning repo ", *repo.Name)
@@ -78,8 +77,7 @@ func getArgs() (string, string) {
 	flag.Parse()
 
 	if *owner == "" || *token == "" {
-		fmt.Println("Missing required arguments, please specify -owner [owner] and -token [token]")
-		os.Exit(1)
+		log.Fatalln("Missing required arguments, please specify -owner [owner] and -token [token]")
 	}
 	return *owner, *token
 }

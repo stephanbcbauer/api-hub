@@ -127,7 +127,7 @@ func getAPISpecAssets(ctx context.Context, client *github.Client, owner string, 
 		return apiSpecs
 	}
 	for _, asset := range assets {
-		if strings.Contains(*asset.Name, "openapi.yaml") {
+		if strings.Contains(*asset.Name, "_openapi.yaml") || strings.Contains(*asset.Name, "_openapi.yml") {
 			apiSpecs = append(apiSpecs, assetInfo{*asset.ID, *asset.Name})
 		}
 	}

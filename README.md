@@ -6,6 +6,10 @@ Welcome to the **API Hub** repository, a centralized location for hosting and vi
 
 The API Hub repository is designed to streamline the process of documenting APIs across multiple repositories within the Tractus-X organization. By automatically identifying OpenAPI specifications from GitHub releases, this repository ensures that the Swagger UI documentation is always up-to-date and accessible via GitHub Pages.
 
+## Usage
+
+In order to take advantage of api-hub automation and host your API please adhere your project to our [TRG 1.10 - Hosting API](https://eclipse-tractusx.github.io/docs/release/trg-1/trg-1-10)
+
 ## Directory Structure
 
 ```bash

@@ -1,0 +1,7 @@
+product: "api-hub"
+leadingRepository: "https://github.com/eclipse-tractusx/api-hub"
+repoCategory: "special"
+repositories:
+  - name: "api-hub"
+    usage: "API docs hosting"
+    url: "https://github.com/eclipse-tractusx/api-hub"

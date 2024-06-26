@@ -68,12 +68,17 @@ func main() {
 	}
 	for _, repo := range repos {
 		log.Println("Scanning repo ", *repo.Name)
-		specAssets := getAPISpecAssets(ctx, client, owner, *repo.Name)
-		if specAssets == nil {
-			log.Println("\t- No OpenAPI specs found")
+		specsUrls, err := getAPISpecsUrls(ctx, client, owner, *repo.Name)
+		if err != nil {
+			log.Println(err)
 			continue
 		}
-		downloadedSpecs := downloadAPISpecs(ctx, client, owner, *repo.Name, specAssets)
+		if specsUrls == nil {
+			log.Println("No OpenAPI specs found")
+			continue
+		}
+
+		downloadedSpecs := downloadAPISpecs(*repo.Name, specsUrls)
 		commitDownloadedSpec(ctx, client, owner, API_DOCS_REPO, downloadedSpecs)
 	}
 }
@@ -171,53 +176,47 @@ func getAPISpecAssets(ctx context.Context, client *github.Client, owner string, 
 	return apiSpecs
 }
 
-func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, repo string, assets []assetInfo) []string {
+func downloadAPISpecs(repo string, specsUrls []string) []string {
 	var downloadedSpecs []string
-	for _, asset := range assets {
-		assetReader, assetURL, err := client.Repositories.DownloadReleaseAsset(ctx, owner, repo, asset.id, nil)
+	for _, url := range specsUrls {
+		resp, err := http.Get(url)
 		if err != nil {
-			log.Printf("\t- Error downloading OpenAPI spec %s: %s\n", asset.name, err)
+			log.Printf("Error downloading API spec file: %v\n", err)
 			continue
 		}
-		var reader io.ReadCloser
-		if assetReader == nil {
-			resp, err := http.Get(assetURL)
-			if err != nil {
-				log.Printf("\t- Error downloading OpenAPI spec %s: %s\n", asset.name, err)
-				continue
-			}
-			reader = resp.Body
-			defer resp.Body.Close()
-		} else {
-			reader = assetReader
-			defer assetReader.Close()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("Bad HTTP status: %s\n", resp.Status)
+			continue
 		}
-		content, err := io.ReadAll(reader)
+		content, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Printf("\t- Error reading OpenAPI spec %s: %s\n", asset.name, err)
+			log.Printf("Error reading http response: %v\n", err)
 			continue
 		}
 		var spec OpenAPISpec
 		err = yaml.Unmarshal(content, &spec)
 		if err != nil {
-			log.Printf("\t- Error parsing OpenAPI spec yaml format: %s\n", err)
+			log.Printf("Error parsing OpenAPI spec yaml format: %s\n", err)
 			continue
 		}
 		dirPath := path.Join("docs", repo, spec.Info.Version)
 		err = os.MkdirAll(dirPath, os.ModePerm)
 		if err != nil {
-			log.Printf("\t- Error creating directory: %s\n", err)
+			log.Printf("Error creating directory: %s\n", err)
 			continue
 		}
-		filePath := path.Join(dirPath, asset.name)
+		urlSplit := strings.Split(url, "/")
+		specName := urlSplit[len(urlSplit)-1]
+		filePath := path.Join(dirPath, specName)
 		err = os.WriteFile(filePath, content, 0644)
 		if err != nil {
-			log.Printf("\t- Error saving OpenAPI spec content to file: %s\n", err)
+			log.Printf("Error saving OpenAPI spec content to file: %s\n", err)
 			continue
 		}
 		downloadedSpecs = append(downloadedSpecs, filePath)
-		log.Printf("\t+ OpenAPI spec %s downloaded successfully\n", asset.name)
-
+		log.Printf("OpenAPI spec %s downloaded successfully\n", specName)
 	}
 	return downloadedSpecs
 }

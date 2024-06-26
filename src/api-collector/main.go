@@ -132,6 +132,24 @@ func getOrgRepos(ctx context.Context, gitOwner string, client *github.Client) ([
 	return allRepos, nil
 }
 
+func getAPISpecsUrls(ctx context.Context, client *github.Client, owner string, repo string) ([]string, error) {
+	metadataFile, _, _, err := client.Repositories.GetContents(ctx, owner, repo, MetadataFilename, &github.RepositoryContentGetOptions{
+		Ref: "main",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error getting .tractusx metadata file: %v", err)
+	}
+	content, err := metadataFile.GetContent()
+	if err != nil {
+		return nil, fmt.Errorf("error getting metadata content: %v", err)
+	}
+	m, err := MetadataFromFile([]byte(content))
+	if err != nil {
+		return nil, fmt.Errorf("error parsing metadata: %v", err)
+	}
+	return m.OpenApiSpecs, nil
+}
+
 func getAPISpecAssets(ctx context.Context, client *github.Client, owner string, repo string) []assetInfo {
 	var apiSpecs []assetInfo
 	release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repo)

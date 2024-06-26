@@ -37,11 +37,6 @@ import (
 
 const API_DOCS_REPO = "api-hub"
 
-type assetInfo struct {
-	id   int64
-	name string
-}
-
 type OpenAPIInfo struct {
 	Version string `yaml:"version"`
 	Title   string `yaml:"title"`
@@ -153,27 +148,6 @@ func getAPISpecsUrls(ctx context.Context, client *github.Client, owner string, r
 		return nil, fmt.Errorf("error parsing metadata: %v", err)
 	}
 	return m.OpenApiSpecs, nil
-}
-
-func getAPISpecAssets(ctx context.Context, client *github.Client, owner string, repo string) []assetInfo {
-	var apiSpecs []assetInfo
-	release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repo)
-	if err != nil {
-		log.Println("\t- No release found")
-		return apiSpecs
-	}
-	log.Printf("\t+ Latest release found: %s\n", *release.Name)
-	assets, _, err := client.Repositories.ListReleaseAssets(ctx, owner, repo, *release.ID, nil)
-	if err != nil {
-		log.Println("\t- No assets found in the release")
-		return apiSpecs
-	}
-	for _, asset := range assets {
-		if strings.Contains(*asset.Name, "_openapi.yaml") || strings.Contains(*asset.Name, "_openapi.yml") {
-			apiSpecs = append(apiSpecs, assetInfo{*asset.ID, *asset.Name})
-		}
-	}
-	return apiSpecs
 }
 
 func downloadAPISpecs(repo string, specsUrls []string) []string {

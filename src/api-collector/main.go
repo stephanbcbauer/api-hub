@@ -51,6 +51,13 @@ type OpenAPISpec struct {
 	Info    OpenAPIInfo `yaml:"info"`
 }
 
+const MetadataFilename = ".tractusx"
+
+type Metadata struct {
+	ProductName  string   `yaml:"product"`
+	OpenApiSpecs []string `yaml:"openApiSpecs"`
+}
+
 func main() {
 	owner, token := getArgs()
 	ctx := context.Background()
@@ -69,6 +76,18 @@ func main() {
 		downloadedSpecs := downloadAPISpecs(ctx, client, owner, *repo.Name, specAssets)
 		commitDownloadedSpec(ctx, client, owner, API_DOCS_REPO, downloadedSpecs)
 	}
+}
+
+func MetadataFromFile(fileContent []byte) (*Metadata, error) {
+	var metadata Metadata
+
+	err := yaml.Unmarshal(fileContent, &metadata)
+	if err != nil {
+		fmt.Println("Error parsing product metadata file")
+		return nil, err
+	}
+
+	return &metadata, nil
 }
 
 func getArgs() (string, string) {

@@ -25,6 +25,7 @@ on:
     - cron: "0 4 * * *"
 
 env:
+  # API collector and specs download "docs" path
   API_COLLECTOR_DIR: "src/api-collector"
 
 jobs:

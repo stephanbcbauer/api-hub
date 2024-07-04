@@ -48,7 +48,7 @@ jobs:
         id: check_specs
         run: |
           ls -R
-          if [ -d "docs" ]; then
+          if [ -d "${{ env.API_COLLECTOR_DIR }}/docs" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "IM HERE 1"
           else

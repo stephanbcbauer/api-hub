@@ -59,7 +59,7 @@ jobs:
         if: steps.check_specs.outputs.exists == 'true'
         with:
           name: openapi-${{ steps.collect_specs.outputs.RANDOM }}
-          path: docs
+          path: ${{ env.API_COLLECTOR_DIR }}/docs
   generate_matrix:
     runs-on: ubuntu-latest
     needs: collect_openapi

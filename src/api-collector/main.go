@@ -74,7 +74,10 @@ func main() {
 		}
 
 		downloadedSpecs := downloadAPISpecs(*repo.Name, specsUrls)
-		commitDownloadedSpec(ctx, client, owner, API_DOCS_REPO, downloadedSpecs)
+		log.Println("List of downloaded OpenAPI specs:")
+		for downloadedSpec := range downloadedSpecs {
+			log.Println("- ",downloadedSpec)
+		}
 	}
 }
 
@@ -195,32 +198,3 @@ func downloadAPISpecs(repo string, specsUrls []string) []string {
 	return downloadedSpecs
 }
 
-func commitDownloadedSpec(ctx context.Context, client *github.Client, owner string, repo string, specs []string) {
-	for _, spec := range specs {
-		content, err := os.ReadFile(spec)
-		if err != nil {
-			log.Printf("\t- Error reading specification file: %v\n", err)
-			continue
-		}
-		fileOpt := &github.RepositoryContentGetOptions{
-			Ref: "main",
-		}
-		_, _, _, err = client.Repositories.GetContents(ctx, owner, repo, spec, fileOpt)
-		if err != nil && content != nil {
-			if githubErr, ok := err.(*github.ErrorResponse); ok && githubErr.Response.StatusCode == 404 {
-				fileOpt := &github.RepositoryContentFileOptions{
-					Message: github.String(fmt.Sprintf("chore: upload OpenAPI spec: %s", spec)),
-					Content: content,
-				}
-				_, _, err := client.Repositories.CreateFile(ctx, owner, repo, spec, fileOpt)
-				if err != nil {
-					log.Printf("\t- Error uploading file: %s\n", err)
-					continue
-				}
-				log.Printf("\t+ Uploaded successfully %s\n", spec)
-			}
-		} else {
-			log.Printf("\t- Spec file %s already exists, skipping upload.\n", spec)
-		}
-	}
-}

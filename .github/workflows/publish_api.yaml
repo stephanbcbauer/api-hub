@@ -1,3 +1,22 @@
+###############################################################
+# Copyright (c) 2024 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License, Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+###############################################################
+
 name: Publish APIs
 
 on:
@@ -11,26 +30,51 @@ env:
 jobs:
   collect_openapi:
     runs-on: ubuntu-latest
+    outputs:
+      specs_exists: ${{ steps.check_specs.outputs.exists }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: "${{ env.API_COLLECTOR_DIR }}/go.mod"
       - name: Collect OpenAPI specs
+        id: collect_specs
         run: |
+          RANDOM=$(uuidgen)
+          echo "RANDOM=${RANDOM}" >> $GITHUB_OUTPUT
           cd ${{ env.API_COLLECTOR_DIR }}
           go run main.go -owner ${{ github.repository_owner }} -token ${{ secrets.GITHUB_TOKEN }}
+      - name: Check for specs
+        id: check_specs
+        run: |
+          if [ -d "docs" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      - uses: actions/upload-artifact@v4
+        if: steps.check_specs.outputs.exists == 'true'
+        with:
+          name: openapi-${{ steps.collect_specs.outputs.RANDOM }}
+          path: docs
   generate_matrix:
-    needs: collect_openapi
     runs-on: ubuntu-latest
+    needs: collect_openapi
+    if: needs.collect_openapi.outputs.specs_exists == 'true'
     outputs:
       specs: ${{ steps.create_specs_list.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+      - name: Download OpenAPI specs artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: docs
+          pattern: openapi-*
+          merge-multiple: true
       - name: Create OpenAPI specs list
         id: create_specs_list
         run: |
-          FILES_ARRAY=$(find docs -type f \( -name "*_openapi.yaml" -o -name "*_openapi.yml" \) | sed 's/.*/\"&\"/' | paste -sd "," -)
+          FILES_ARRAY=$(find docs -type f \( -name "*.yaml" -o -name "*.yml" \) | sed 's/.*/\"&\"/' | paste -sd "," -)
           echo "matrix={\"specs\": [${FILES_ARRAY}]}" >> $GITHUB_OUTPUT
   generate_swagger_ui:
     needs: generate_matrix
@@ -54,7 +98,7 @@ jobs:
           spec-file: ${{ matrix.specs }}
       - uses: actions/upload-artifact@v4
         with:
-          name: openapi-${{ steps.determine_directory.outputs.RANDOM }}
+          name: swagger-${{ steps.determine_directory.outputs.RANDOM }}
           path: docs
   deploy_swagger_ui:
     needs: generate_swagger_ui
@@ -64,7 +108,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: docs
-          pattern: openapi-*
+          pattern: swagger-*
           merge-multiple: true
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

@@ -75,8 +75,8 @@ func main() {
 
 		downloadedSpecs := downloadAPISpecs(*repo.Name, specsUrls)
 		log.Println("List of downloaded OpenAPI specs:")
-		for downloadedSpec := range downloadedSpecs {
-			log.Println("- ",downloadedSpec)
+		for _, downloadedSpec := range downloadedSpecs {
+			log.Printf("- %s\n",downloadedSpec)
 		}
 	}
 }

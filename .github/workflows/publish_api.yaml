@@ -47,10 +47,13 @@ jobs:
       - name: Check for specs
         id: check_specs
         run: |
+          ls -R
           if [ -d "docs" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
+            echo "IM HERE 1"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
+            echo "IM HERE 2"
           fi
       - uses: actions/upload-artifact@v4
         if: steps.check_specs.outputs.exists == 'true'

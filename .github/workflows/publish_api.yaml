@@ -95,7 +95,7 @@ jobs:
         run: |
           FILE_PATH="${{ matrix.specs }}"
           DIR_PATH=$(dirname "${FILE_PATH}")
-          PRODUCT_PATH=${dirname "${DIR_PATH}"}
+          PRODUCT_PATH=$(dirname "${DIR_PATH}")
           RANDOM=$(uuidgen)
           echo "DIR_PATH=${DIR_PATH}" >> $GITHUB_OUTPUT
           echo "PRODUCT_PATH=${PRODUCT_PATH}" >> $GITHUB_OUTPUT

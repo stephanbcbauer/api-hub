@@ -123,6 +123,10 @@ jobs:
           path: docs
           pattern: swagger-*
           merge-multiple: true
+      - name: Generate Directory Listings
+        uses: jayanta525/github-pages-directory-listing@v4.0.0
+        with:
+          FOLDER: docs
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

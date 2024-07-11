@@ -35,8 +35,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const API_DOCS_REPO = "api-hub"
-
+const (
+	API_DOCS_REPO = "api-hub"
+	API_SPEC_PATH = "/docs/api/openAPI.yaml"
+)
 type OpenAPIInfo struct {
 	Version string `yaml:"version"`
 	Title   string `yaml:"title"`
@@ -198,3 +200,13 @@ func downloadAPISpecs(repo string, specsUrls []string) []string {
 	return downloadedSpecs
 }
 
+func getAPISpecFromDir(ctx context.Context, client *github.Client, owner string, repo string) ([]byte, error) {
+    apiContent, _, _, err := client.Repositories.GetContents(ctx, owner, repo, API_SPEC_PATH, &github.RepositoryContentGetOptions{
+        Ref: "main",
+    })
+    if err != nil {
+        return []byte{}, fmt.Errorf("error getting file content: %v", err)
+    }
+	content, err := apiContent.GetContent()
+	return []byte(content), err
+}

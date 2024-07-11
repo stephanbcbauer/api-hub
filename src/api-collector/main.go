@@ -210,3 +210,21 @@ func getAPISpecFromDir(ctx context.Context, client *github.Client, owner string,
 	content, err := apiContent.GetContent()
 	return []byte(content), err
 }
+
+func getAPISpecFromUrl(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return []byte{}, fmt.Errorf("error downloading API spec file: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return []byte{}, fmt.Errorf("bad HTTP status: %s", resp.Status)
+
+	}
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, fmt.Errorf("error reading HTTP response: %v", err)
+	}
+	return content, nil
+}

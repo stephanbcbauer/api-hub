@@ -228,3 +228,22 @@ func getAPISpecFromUrl(url string) ([]byte, error) {
 	}
 	return content, nil
 }
+
+func saveAPISpec(content []byte, repo string) (string, error)  {
+	var spec OpenAPISpec
+	err := yaml.Unmarshal([]byte(content), &spec)
+	if err != nil {
+		return "", fmt.Errorf("error parsing OpenAPI spec yaml format: %v", err)
+	}
+	dirPath := path.Join("docs", repo, spec.Info.Version)
+	err = os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		return "", fmt.Errorf("error creating directory: %v", err)
+	}
+	filePath := path.Join(dirPath, "openAPI.yaml")
+	err = os.WriteFile(filePath, content, 0644)
+	if err != nil {
+		return "", fmt.Errorf("error saving OpenAPI spec content to file: %v", err)
+	}
+	return filePath, nil
+}

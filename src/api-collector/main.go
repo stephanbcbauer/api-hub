@@ -130,7 +130,7 @@ func getOrgRepos(ctx context.Context, gitOwner string, client *github.Client) ([
 	return allRepos, nil
 }
 
-func getAPISpecsUrls(ctx context.Context, client *github.Client, owner string, repo string) ([]string, error) {
+func getAPISpecsUrlsFromMetadata(ctx context.Context, client *github.Client, owner string, repo string) ([]string, error) {
 	metadataFile, _, _, err := client.Repositories.GetContents(ctx, owner, repo, MetadataFilename, &github.RepositoryContentGetOptions{
 		Ref: "main",
 	})
@@ -159,7 +159,7 @@ func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, 
 	}
 	log.Printf("OpenAPI specs not found in the default location docs/api/openAPI.yaml. Proceeding with .tractusx metadata.")
 	var downloadedSpecs []string
-	specsUrls, err := getAPISpecsUrls(ctx, client, owner, repo)
+	specsUrls, err := getAPISpecsUrlsFromMetadata(ctx, client, owner, repo)
 	if err != nil {
 		log.Printf("%v\n", err)
 	}

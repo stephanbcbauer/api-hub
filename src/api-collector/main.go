@@ -28,7 +28,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/google/go-github/v61/github"
 	"golang.org/x/oauth2"
@@ -65,20 +64,14 @@ func main() {
 	}
 	for _, repo := range repos {
 		log.Println("Scanning repo ", *repo.Name)
-		specsUrls, err := getAPISpecsUrls(ctx, client, owner, *repo.Name)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		if specsUrls == nil {
-			log.Println("No OpenAPI specs found")
-			continue
-		}
-
-		downloadedSpecs := downloadAPISpecs(*repo.Name, specsUrls)
-		log.Println("List of downloaded OpenAPI specs:")
-		for _, downloadedSpec := range downloadedSpecs {
-			log.Printf("- %s\n",downloadedSpec)
+		downloadedSpecs := downloadAPISpecs(ctx, client, owner, *repo.Name)
+		if len(downloadedSpecs) > 0 {
+			log.Println("List of downloaded OpenAPI specs:")
+			for _, downloadedSpec := range downloadedSpecs {
+				log.Printf("- %s\n",downloadedSpec)
+			}
+		} else {
+			log.Printf("No OpenAPI specs found in .tractusx metadata.")
 		}
 	}
 }

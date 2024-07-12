@@ -155,47 +155,34 @@ func getAPISpecsUrls(ctx context.Context, client *github.Client, owner string, r
 	return m.OpenApiSpecs, nil
 }
 
-func downloadAPISpecs(repo string, specsUrls []string) []string {
+func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, repo string) []string {
+	content, err := getAPISpecFromDir(ctx, client, owner, repo)
+	if err == nil {
+		specPath, err := saveAPISpec(content, repo)
+		if err != nil {
+			log.Fatalf("%v\n", err)
+		}
+		return []string{specPath}
+	}
+	log.Printf("OpenAPI specs not found in the default location docs/api/openAPI.yaml. Proceeding with .tractusx metadata.")
 	var downloadedSpecs []string
+	specsUrls, err := getAPISpecsUrls(ctx, client, owner, repo)
+	if err != nil {
+		log.Printf("%v\n", err)
+	}
 	for _, url := range specsUrls {
-		resp, err := http.Get(url)
+		specContent, err := getAPISpecFromUrl(url)
 		if err != nil {
-			log.Printf("Error downloading API spec file: %v\n", err)
+			log.Printf("%v\n",err)
 			continue
 		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			log.Printf("Bad HTTP status: %s\n", resp.Status)
-			continue
-		}
-		content, err := io.ReadAll(resp.Body)
+		specPath, err := saveAPISpec(specContent, repo)
 		if err != nil {
-			log.Printf("Error reading http response: %v\n", err)
+			log.Printf("%v\n",err)
 			continue
 		}
-		var spec OpenAPISpec
-		err = yaml.Unmarshal(content, &spec)
-		if err != nil {
-			log.Printf("Error parsing OpenAPI spec yaml format: %s\n", err)
-			continue
-		}
-		dirPath := path.Join("docs", repo, spec.Info.Version)
-		err = os.MkdirAll(dirPath, os.ModePerm)
-		if err != nil {
-			log.Printf("Error creating directory: %s\n", err)
-			continue
-		}
-		urlSplit := strings.Split(url, "/")
-		specName := urlSplit[len(urlSplit)-1]
-		filePath := path.Join(dirPath, specName)
-		err = os.WriteFile(filePath, content, 0644)
-		if err != nil {
-			log.Printf("Error saving OpenAPI spec content to file: %s\n", err)
-			continue
-		}
-		downloadedSpecs = append(downloadedSpecs, filePath)
-		log.Printf("OpenAPI spec %s downloaded successfully\n", specName)
+		downloadedSpecs = append(downloadedSpecs, specPath)
+		log.Printf("OpenAPI spec saved successfully\n", specPath)
 	}
 	return downloadedSpecs
 }

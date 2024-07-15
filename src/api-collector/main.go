@@ -149,19 +149,13 @@ func getAPISpecsUrlsFromMetadata(ctx context.Context, client *github.Client, own
 }
 
 func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, repo string) []string {
-	content, err := getAPISpecFromDir(ctx, client, owner, repo)
-	if err == nil {
-		specPath, err := saveAPISpec(content, repo)
-		if err != nil {
-			log.Fatalf("%v\n", err)
-		}
-		return []string{specPath}
-	}
-	log.Printf("OpenAPI specs not found in the default location docs/api/openAPI.yaml. Proceeding with .tractusx metadata.")
 	var downloadedSpecs []string
 	specsUrls, err := getAPISpecsUrlsFromMetadata(ctx, client, owner, repo)
 	if err != nil {
 		log.Printf("%v\n", err)
+	}
+	if len(specsUrls) == 0 {
+		specsUrls = append(specsUrls, fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/main/%s", owner, repo, API_SPEC_PATH))
 	}
 	for _, url := range specsUrls {
 		specContent, err := getAPISpecFromUrl(url)
@@ -178,17 +172,6 @@ func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, 
 		log.Printf("OpenAPI spec saved successfully\n", specPath)
 	}
 	return downloadedSpecs
-}
-
-func getAPISpecFromDir(ctx context.Context, client *github.Client, owner string, repo string) ([]byte, error) {
-    apiContent, _, _, err := client.Repositories.GetContents(ctx, owner, repo, API_SPEC_PATH, &github.RepositoryContentGetOptions{
-        Ref: "main",
-    })
-    if err != nil {
-        return []byte{}, fmt.Errorf("error getting file content: %v", err)
-    }
-	content, err := apiContent.GetContent()
-	return []byte(content), err
 }
 
 func getAPISpecFromUrl(url string) ([]byte, error) {

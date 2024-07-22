@@ -173,7 +173,6 @@ func downloadAPISpecs(ctx context.Context, client *github.Client, owner string, 
 			continue
 		}
 		downloadedSpecs = append(downloadedSpecs, specPath)
-		log.Printf("OpenAPI spec saved successfully\n", specPath)
 	}
 	return downloadedSpecs
 }

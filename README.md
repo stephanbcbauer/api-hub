@@ -8,7 +8,7 @@ The API Hub repository is designed to streamline the process of documenting APIs
 
 ## Usage
 
-In order to take advantage of api-hub automation and host your API please adhere your project to our [TRG 1.10 - Hosting API](https://eclipse-tractusx.github.io/docs/release/trg-1/trg-1-10)
+In order to take advantage of api-hub automation and host your API please adhere your project to our [TRG 1.08 - Hosting API](https://eclipse-tractusx.github.io/docs/release/trg-1/trg-1-08)
 
 ## Directory Structure
 

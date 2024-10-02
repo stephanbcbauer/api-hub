@@ -127,6 +127,7 @@ jobs:
         with:
           output: ${{ steps.determine_directory.outputs.DIR_PATH }}/swagger-ui
           spec-file: ${{ matrix.specs }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Generate Directory Listings
         uses: jayanta525/github-pages-directory-listing@v4.0.0
         with:

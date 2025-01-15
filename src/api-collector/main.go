@@ -111,9 +111,9 @@ func getAuthenticatedClient(ctx context.Context, gitToken string) *github.Client
 }
 
 func getOrgRepos(ctx context.Context, gitOwner string, client *github.Client) ([]*github.Repository, error) {
-	opt := &github.RepositoryListOptions{
-        Type: "owner", // Can also be "all" or "public"
-    }
+	opt := &github.RepositoryListByOrgOptions{
+		ListOptions: github.ListOptions{},
+	}
 
 	var allRepos []*github.Repository
 

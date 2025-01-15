@@ -44,7 +44,7 @@ jobs:
           RANDOM=$(uuidgen)
           echo "RANDOM=${RANDOM}" >> $GITHUB_OUTPUT
           cd ${{ env.API_COLLECTOR_DIR }}
-          go run main.go -owner ${{ github.repository_owner }} -token ${{ secrets.GITHUB_TOKEN }}
+          go run main.go -owner ${{ github.actor }} -token ${{ secrets.GITHUB_TOKEN }}
       - name: Move multiple OpenAPI specs files in one directory into individual directories
         run: |
           # Find all directories containing multiple *.yaml or *.yml files

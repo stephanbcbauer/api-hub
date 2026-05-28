@@ -686,14 +686,17 @@ components:
             - IsAlternativeHeadquarterFor
             - IsManagedBy
             - IsOwnedBy
-        businessPartnerSourceBpnl:
+            - IsReplacedBy
+        businessPartnerSourceBpn:
           type: string
-        businessPartnerTargetBpnl:
+        businessPartnerTargetBpn:
           type: string
         validityPeriods:
           type: array
           items:
             $ref: "#/components/schemas/RelationValidityPeriod"
+        reasonCode:
+          type: string
     BusinessState:
       type: object
       description: The business state information for the corresponding business partner
